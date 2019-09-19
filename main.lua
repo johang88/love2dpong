@@ -6,7 +6,10 @@ PLAYER_MOVE_SPEED = 10
 PLAYER_MARGIN = 10
 
 BALL_RADIUS = 8
-BALL_VELOCITY = 10
+BALL_VELOCITY = 12.5
+
+PLAYER_HIT_SHAKE_DURATION = 0.3
+PLAYER_HIT_SHAKE_MAGNITUDE= 5
 
 players = {}
 ball = {
@@ -16,6 +19,33 @@ ball = {
    vy = 0,
    held_by = nil
 }
+
+screen_shake = {
+   t = 0,
+   duration = 0,
+   magnitude = 0
+}
+
+function start_screen_shake(duration, magnitude)
+   screen_shake.t = 0
+   screen_shake.duration = duration
+   screen_shake.magnitude = magnitude
+end
+
+function update_screen_shake(dt)
+   if screen_shake.t < screen_shake.duration then
+      screen_shake.t = screen_shake.t + dt
+   end
+end
+
+function apply_screen_shake()
+   if screen_shake.t < screen_shake.duration then
+      local dx = love.math.random(-screen_shake.magnitude, screen_shake.magnitude)
+      local dy = love.math.random(-screen_shake.magnitude, screen_shake.magnitude)
+
+      love.graphics.translate(dx, dy)
+  end
+end
 
 function init_player(x, direction, key_up, key_down, key_fire)
    local y = love.graphics.getHeight() / 2 - PLAYER_HEIGHT / 2
@@ -108,6 +138,7 @@ function update_ball()
       and ball.y < players[2].y + PLAYER_HEIGHT 
    then
       calculate_ball_reflected_velocity(players[2])
+      start_screen_shake(PLAYER_HIT_SHAKE_DURATION, PLAYER_HIT_SHAKE_MAGNITUDE)
    end
 
    if     ball.x - BALL_RADIUS < player_size
@@ -115,6 +146,7 @@ function update_ball()
       and ball.y < players[1].y + PLAYER_HEIGHT 
    then
       calculate_ball_reflected_velocity(players[1])
+      start_screen_shake(PLAYER_HIT_SHAKE_DURATION, PLAYER_HIT_SHAKE_MAGNITUDE)
    end
 
    -- Check the bounds
@@ -135,6 +167,8 @@ function update_ball()
 end
 
 function love.load()
+   love.window.setMode(1280, 720)
+
    init_player(PLAYER_MARGIN, 1, "w", "s", "d")
    init_player(love.graphics.getWidth() - PLAYER_MARGIN - PLAYER_WIDTH, -1, "up", "down", "left")
    
@@ -146,17 +180,19 @@ function love.load()
    love.window.setTitle("P.O.N.G")
 end
 
-function love.update() 
+function love.update(dt)
    for i,player in ipairs(players) do
       check_player_input(player)
       check_player_bounds(player)
    end
 
    update_ball()
+   update_screen_shake(dt)
 end
 
 function love.draw()
-   -- Draw players
+   apply_screen_shake()
+
    for i,player in ipairs(players) do
       love.graphics.rectangle("fill", 
          player.x, player.y,
